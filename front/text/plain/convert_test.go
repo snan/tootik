@@ -232,6 +232,14 @@ func TestToHTML_ManyLineBreaks(t *testing.T) {
 	assert.Equal(t, expected, html)
 }
 
+func TestToHTML_ManyLinesManyLineBreaks(t *testing.T) {
+	post := "this is a line\n\n\n\n\n\n\nthis is another line\n\n\n\n\n\n\nthis is yet another line"
+	expected := `<p>this is a line</p><p>this is another line</p><p>this is yet another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
 func TestToHTML_LeadingLineBreak(t *testing.T) {
 	post := "\nthis is a line\nthis is another line"
 	expected := `<p><br/>this is a line<br/>this is another line</p>`
@@ -243,6 +251,22 @@ func TestToHTML_LeadingLineBreak(t *testing.T) {
 func TestToHTML_LeadingLineBreaks(t *testing.T) {
 	post := "\n\n\nthis is a line\nthis is another line"
 	expected := `<p><br/><br/><br/>this is a line<br/>this is another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
+func TestToHTML_TrailingLineBreak(t *testing.T) {
+	post := "this is a line\nthis is another line\n"
+	expected := `<p>this is a line<br/>this is another line<br/></p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
+func TestToHTML_TrailingLineBreaks(t *testing.T) {
+	post := "this is a line\nthis is another line\n\n\n"
+	expected := `<p>this is a line<br/>this is another line<br/><br/><br/></p>`
 
 	html := ToHTML(post)
 	assert.Equal(t, expected, html)
