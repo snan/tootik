@@ -232,6 +232,14 @@ func TestToHTML_LeadingLineBreaks(t *testing.T) {
 	assert.Equal(t, expected, html)
 }
 
+func TestToHTML_OnlyLineBreaks(t *testing.T) {
+	post := "\n\n\n"
+	expected := `<p><br/><br/><br/></p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
 func TestToHTML_Link(t *testing.T) {
 	post := `this is a plain post with a link: gemini://aa.bb.com/cc?dd=ee&ff=gg%20hh`
 	expected := `<p>this is a plain post with a link: <a href="gemini://aa.bb.com/cc?dd=ee&ff=gg%20hh" target="_blank">gemini://aa.bb.com/cc?dd=ee&ff=gg%20hh</a></p>`
