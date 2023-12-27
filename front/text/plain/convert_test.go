@@ -30,6 +30,7 @@ func TestFromHTML_Empty(t *testing.T) {
 	raw, links := FromHTML(post)
 	assert.Equal(t, expected, raw)
 	assert.Equal(t, expectedLinks, links)
+	assert.Equal(t, post, ToHTML(expected))
 }
 
 func TestFromHTML_Plain(t *testing.T) {
@@ -90,6 +91,7 @@ func TestFromHTML_LineBreak(t *testing.T) {
 	raw, links := FromHTML(post)
 	assert.Equal(t, expected, raw)
 	assert.Equal(t, expectedLinks, links)
+	assert.Equal(t, post, ToHTML(expected))
 }
 
 func TestFromHTML_MentionAndLink(t *testing.T) {
@@ -135,6 +137,69 @@ func TestFromHTML_Mention(t *testing.T) {
 	assert.Empty(t, links)
 }
 
+func TestFromHTML_Image(t *testing.T) {
+	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" />?`
+	expected := "hi @x, have you seen [https://c.d/efg.jpg]?"
+	expectedLinks := data.OrderedMap[string, string]{}
+	expectedLinks.Store("https://c.d/efg.jpg", "")
+
+	raw, links := FromHTML(post)
+	assert.Equal(t, expected, raw)
+	assert.Equal(t, expectedLinks, links)
+}
+
+func TestFromHTML_ImageAlt(t *testing.T) {
+	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" />?`
+	expected := "hi @x, have you seen [this]?"
+	expectedLinks := data.OrderedMap[string, string]{}
+	expectedLinks.Store("https://c.d/efg.jpg", "this")
+
+	raw, links := FromHTML(post)
+	assert.Equal(t, expected, raw)
+	assert.Equal(t, expectedLinks, links)
+}
+
+func TestFromHTML_ImageNoSrc(t *testing.T) {
+	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img alt="this" />?`
+	expected := "hi @x, have you seen [this]?"
+	expectedLinks := data.OrderedMap[string, string]{}
+
+	raw, links := FromHTML(post)
+	assert.Equal(t, expected, raw)
+	assert.Equal(t, expectedLinks, links)
+}
+
+func TestFromHTML_ImageAndLink(t *testing.T) {
+	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" /> and <a href="https://h.i/jkl" target="_blank" rel="nofollow noopener noreferrer"><span class="invisible">https://</span><span class="ellipsis">h.i/j</span><span class="invisible">kl</span></a>?`
+	expected := "hi @x, have you seen [this] and h.i/j…?"
+	expectedLinks := data.OrderedMap[string, string]{}
+	expectedLinks.Store("https://h.i/jkl", "")
+	expectedLinks.Store("https://c.d/efg.jpg", "this")
+
+	raw, links := FromHTML(post)
+	assert.Equal(t, expected, raw)
+	assert.Equal(t, expectedLinks, links)
+}
+
+func TestFromHTML_ImageAndSameLink(t *testing.T) {
+	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" /> and <a href="https://c.d/efg.jpg" target="_blank" rel="nofollow noopener noreferrer"><span class="invisible">https://</span><span class="ellipsis">h.i/j</span><span class="invisible">kl</span></a>?`
+	expected := "hi @x, have you seen [this] and h.i/j…?"
+	expectedLinks := data.OrderedMap[string, string]{}
+	expectedLinks.Store("https://c.d/efg.jpg", "")
+
+	raw, links := FromHTML(post)
+	assert.Equal(t, expected, raw)
+	assert.Equal(t, expectedLinks, links)
+}
+
+func TestToHTML_Empty(t *testing.T) {
+	post := ``
+	expected := post
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
 func TestToHTML_Plain(t *testing.T) {
 	post := `this is a plain post`
 	expected := `<p>this is a plain post</p>`
@@ -146,6 +211,22 @@ func TestToHTML_Plain(t *testing.T) {
 func TestToHTML_LineBreak(t *testing.T) {
 	post := "this is a line\nthis is another line"
 	expected := `<p>this is a line<br/>this is another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
+func TestToHTML_LeadingLineBreak(t *testing.T) {
+	post := "\nthis is a line\nthis is another line"
+	expected := `<p><br/>this is a line<br/>this is another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
+func TestToHTML_LeadingLineBreaks(t *testing.T) {
+	post := "\n\n\nthis is a line\nthis is another line"
+	expected := `<p><br/><br/><br/>this is a line<br/>this is another line</p>`
 
 	html := ToHTML(post)
 	assert.Equal(t, expected, html)
@@ -207,57 +288,18 @@ func TestToHTML_LinkParentheses(t *testing.T) {
 	assert.Equal(t, expected, html)
 }
 
-func TestFromHTML_Image(t *testing.T) {
-	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" />?`
-	expected := "hi @x, have you seen [https://c.d/efg.jpg]?"
-	expectedLinks := data.OrderedMap[string, string]{}
-	expectedLinks.Store("https://c.d/efg.jpg", "")
+func TestToHTML_TitleAndParagraphs(t *testing.T) {
+	post := "this is the title\n\nthis is a paragraph\n\nthis is another paragraph"
+	expected := `<p>this is the title</p><p>this is a paragraph</p><p>this is another paragraph</p>`
 
-	raw, links := FromHTML(post)
-	assert.Equal(t, expected, raw)
-	assert.Equal(t, expectedLinks, links)
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
 }
 
-func TestFromHTML_ImageAlt(t *testing.T) {
-	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" />?`
-	expected := "hi @x, have you seen [this]?"
-	expectedLinks := data.OrderedMap[string, string]{}
-	expectedLinks.Store("https://c.d/efg.jpg", "this")
+func TestToHTML_TitleSubtitleAndParagraphs(t *testing.T) {
+	post := "this is the title\n\nthis is the subtitle\n\nthis is a paragraph\n\nthis is another paragraph"
+	expected := `<p>this is the title</p><p>this is the subtitle</p><p>this is a paragraph</p><p>this is another paragraph</p>`
 
-	raw, links := FromHTML(post)
-	assert.Equal(t, expected, raw)
-	assert.Equal(t, expectedLinks, links)
-}
-
-func TestFromHTML_ImageNoSrc(t *testing.T) {
-	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img alt="this" />?`
-	expected := "hi @x, have you seen [this]?"
-	expectedLinks := data.OrderedMap[string, string]{}
-
-	raw, links := FromHTML(post)
-	assert.Equal(t, expected, raw)
-	assert.Equal(t, expectedLinks, links)
-}
-
-func TestFromHTML_ImageAndLink(t *testing.T) {
-	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" /> and <a href="https://h.i/jkl" target="_blank" rel="nofollow noopener noreferrer"><span class="invisible">https://</span><span class="ellipsis">h.i/j</span><span class="invisible">kl</span></a>?`
-	expected := "hi @x, have you seen [this] and h.i/j…?"
-	expectedLinks := data.OrderedMap[string, string]{}
-	expectedLinks.Store("https://h.i/jkl", "")
-	expectedLinks.Store("https://c.d/efg.jpg", "this")
-
-	raw, links := FromHTML(post)
-	assert.Equal(t, expected, raw)
-	assert.Equal(t, expectedLinks, links)
-}
-
-func TestFromHTML_ImageAndSameLink(t *testing.T) {
-	post := `hi <span class="h-card"><a href="https://a.b/@x" class="u-url mention">@<span>x</span></a></span>, have you seen <img src="https://c.d/efg.jpg" alt="this" /> and <a href="https://c.d/efg.jpg" target="_blank" rel="nofollow noopener noreferrer"><span class="invisible">https://</span><span class="ellipsis">h.i/j</span><span class="invisible">kl</span></a>?`
-	expected := "hi @x, have you seen [this] and h.i/j…?"
-	expectedLinks := data.OrderedMap[string, string]{}
-	expectedLinks.Store("https://c.d/efg.jpg", "")
-
-	raw, links := FromHTML(post)
-	assert.Equal(t, expected, raw)
-	assert.Equal(t, expectedLinks, links)
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
 }
