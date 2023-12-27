@@ -216,6 +216,22 @@ func TestToHTML_LineBreak(t *testing.T) {
 	assert.Equal(t, expected, html)
 }
 
+func TestToHTML_TwoLineBreaks(t *testing.T) {
+	post := "this is a line\n\nthis is another line"
+	expected := `<p>this is a line</p><p>this is another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
+func TestToHTML_ManyLineBreaks(t *testing.T) {
+	post := "this is a line\n\n\n\n\n\n\nthis is another line"
+	expected := `<p>this is a line</p><p>this is another line</p>`
+
+	html := ToHTML(post)
+	assert.Equal(t, expected, html)
+}
+
 func TestToHTML_LeadingLineBreak(t *testing.T) {
 	post := "\nthis is a line\nthis is another line"
 	expected := `<p><br/>this is a line<br/>this is another line</p>`
